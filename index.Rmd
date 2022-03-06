@@ -1,0 +1,114 @@
+---
+title: "Regression Models Course Project"
+author: "nthehai01"
+date: "3/6/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Project Introduction
+
+In this project, I will work for **Motor Trend**, a magazine about the automobile industry. Looking at the ```mtcars``` data set, I am interested i exploring the relationship between a set of variables and miles per gallon as an outcome. I am particularly interested in the following two questions:
+
+* “Is an automatic or manual transmission better for MPG”
+* "Quantify the MPG difference between automatic and manual transmissions"
+
+## EDA
+
+Loading data set
+```{r}
+data("mtcars")
+head(mtcars)
+```
+
+Transforming some features into factors
+```{r}
+mtcars$cyl <- factor(mtcars$cyl)
+mtcars$vs <- factor(mtcars$vs)
+mtcars$am <- factor(mtcars$am)
+mtcars$gear <- factor(mtcars$gear)
+mtcars$carb <- factor(mtcars$carb)
+```
+
+Summarizing data
+```{r}
+summary(mtcars)
+```
+
+Boxplot showing the difference number of miles per gallon between automatic and manual vehicles
+```{r}
+library(ggplot2)
+dif <- ggplot(mtcars, aes(x = am, y = mpg)) +
+    geom_boxplot() +
+    scale_x_discrete(labels = c("Automatic", "Manual")) + 
+    xlab("Types of vehicles") +
+    ylab("Miles per gallon") +
+    ggtitle("MPG that automatic and manual vehicles consume")
+dif 
+```
+
+
+## Regression Analysis
+
+*Qualify the difference in MPG that each type of vehicles consume*
+```{r}
+aggregate(mpg ~ am, data = mtcars, mean)
+```
+
+We can see that overall, the for 1 gallon, the automatic cars can go more than almost  7 gallon compared to the manual cars.
+
+*Now, I will use t-test to determine what I have just denoted is true:*
+```{r}
+automatic.cars <- mtcars[mtcars$am == 0, ]
+manual.cars <- mtcars[mtcars$am == 1, ]
+
+t.test(manual.cars$mpg, automatic.cars$mpg, 
+       alternative = "greater")
+```
+
+The p-value is less than 0.05, thus we can state this is a significant difference.
+
+```{r}
+init <- lm(mpg ~ am, data = mtcars)
+summary(init)
+
+betterFit <- lm(mpg ~ am + cyl + disp + hp + wt, data = mtcars)
+anova(init, betterFit)
+```
+
+
+#### Find the model that best predicting the MPG
+
+*Fit the simplest model with only the type of vehicles is the predictor:*
+```{r}
+sim.model <- lm(mpg ~ am, data = mtcars)
+summary(sim.model)
+```
+
+The $R^2$ is less than $36$%. It means the type of vehicles helps us explain only $36$% of the variance, thus it is not enough good for predicting a new MPG of a new car. We need to fit a multivariate model.
+
+*First, we need to draw a pair plot to determine which features have the strongest correlation with the ```mpg```:*
+```{r}
+pairs(mpg ~ ., data = mtcars)
+```
+
+From the graph above, we can see that the ```cyl```, ```disp```, ```hp```, ```wt``` have the strongest correlation with ```mpg```.
+
+*Now, we fit the new model with ```cyl```, ```disp```, ```hp```, ```wt``` features as the predictors:*
+```{r}
+mul.model <- lm(mpg ~ am + cyl + disp + hp + wt, data = mtcars)
+summary(mul.model)
+```
+
+The $R^2$ is $87$% which is very high compared to the $R^2$ of the previous one-variable model.
+
+*Using ```anova``` function to comapare the two models:*
+```{r}
+anova(sim.model, mul.model)
+```
+
+The p-value is less than 0.05, we can claim that the multivariate model ```mul.model``` is better than ```sim.model```.
